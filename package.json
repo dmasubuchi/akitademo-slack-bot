@@ -1,0 +1,21 @@
+{
+  "name": "akitademo-slack-bot",
+  "version": "1.0.0",
+  "description": "Dify と Slack を組み合わせた RAG ボット",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "@slack/bolt": "^3.13.3",
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
