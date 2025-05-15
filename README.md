@@ -1,22 +1,26 @@
-
-
 # 大津神 - Dify × Slack RAGボット
 
 ## 概要
-「大津神」は、Difyの検索拡張生成（RAG）機能を活用したSlackボットです。社内ドキュメントやナレッジベースに対する質問に回答し、チーム内のナレッジ共有と情報アクセスを効率化します。
+「大津神」は、Difyの検索拡張生成（RAG）機能を活用したSlackボットです。Slack上での自然言語による質問に対し、社内ドキュメントやナレッジベースから関連情報を検索・抽出し、根拠付きの回答を自動生成します。チームのナレッジ共有・情報アクセスの効率化を目的としています。
 
-## 特徴
-- **RAG（検索拡張生成）**: 既存の社内ドキュメントから関連情報を検索・抽出し、的確な回答を生成
-- **簡単な質問方法**: チャンネルでのメンションまたはDMでの直接質問に対応
-- **引用元の表示**: 回答の根拠となる情報源を明示
-- **マルチチャンネル対応**: 複数のチャンネルで同時に利用可能
+---
 
-## アーキテクチャ
-本システムは以下のコンポーネントで構成されています：
-- Slackインターフェース（Bolt for JavaScript）
-- Dify RAGプラットフォーム
-- Azure Web App（Node.jsホスティング）
-- ベクターデータベース（文書インデックス）
+## 主な特徴
+- **RAG（検索拡張生成）**: 社内ドキュメントから関連情報を検索し、AIが根拠付きで回答を生成します。
+- **Slack連携**: チャンネルでのメンション、またはDMでの直接質問に対応。
+- **引用元の明示**: 回答の根拠となるドキュメント名やファイル名を自動で表示。
+- **マルチチャンネル対応**: 複数チャンネル・複数ユーザーで同時利用可能。
+- **Azure Web App対応**: Node.jsアプリとしてAzure Web Appにそのままデプロイ可能。
+
+---
+
+## システム構成
+- **Slackインターフェース**: [Bolt for JavaScript](https://slack.dev/bolt-js/)
+- **Dify RAGプラットフォーム**: [Dify](https://dify.ai/)
+- **Azure Web App**: Node.jsホスティング
+- **ベクターデータベース**: Dify内で管理
+
+---
 
 ## セットアップ手順
 
@@ -27,128 +31,147 @@
 - Azure Web Appアカウント
 
 ### 1. Slackアプリの作成
-1. [Slack API](https://api.slack.com/apps)にアクセスし、「Create New App」→「From scratch」を選択
+1. [Slack API](https://api.slack.com/apps)で新規アプリ作成（From scratch）
 2. アプリ名「大津神」を入力し、ワークスペースを選択
-3. 「OAuth & Permissions」で以下のスコープを追加：
-   - `app_mentions:read`
-   - `chat:write`
-   - `channels:history`
-   - `channels:read`
-   - `groups:history`
-   - `im:history`
-4. 「Event Subscriptions」を有効化し、以下のイベントをサブスクライブ：
-   - `app_mention`
-   - `message.channels`
-   - `message.im`
-5. 「App Home」タブで、「Messages Tab」を有効化
+3. 「OAuth & Permissions」で以下のBotスコープを追加  
+   `app_mentions:read`, `chat:write`, `channels:history`, `channels:read`, `groups:history`, `im:history`
+4. 「Event Subscriptions」を有効化し、  
+   `app_mention`, `message.channels`, `message.im` をサブスクライブ
+5. 「App Home」タブで「Messages Tab」を有効化
 6. ワークスペースにアプリをインストール
-7. Bot Token (`xoxb-...`) と Signing Secret を保存
+7. Bot Token (`xoxb-...`) と Signing Secret を控える
 
 ### 2. Difyのセットアップ
-1. [Dify](https://dify.ai/)でアカウントを作成
-2. 新しいアプリケーションを作成（RAG機能有効）
-3. 適切なLLMプロバイダーを選択（OpenAI, Claude等）
-4. 社内ドキュメントをアップロードしてインデックス化
+1. [Dify](https://dify.ai/)でアカウント作成
+2. 新規アプリケーション作成（RAG機能有効化）
+3. LLMプロバイダー（OpenAI, Claude等）を選択
+4. 社内ドキュメントをアップロードしインデックス化
 5. APIセクションからAPIキーを取得
 
 ### 3. リポジトリのクローンとセットアップ
 ```bash
-# リポジトリをクローン
 git clone https://github.com/yourusername/akitademo-slack-bot.git
 cd akitademo-slack-bot
-
-# 依存関係のインストール
 npm install
 ```
 
 ### 4. 環境変数の設定
-`.env`ファイルを作成し、以下の内容を設定：
+`.env`ファイルを作成し、以下を記入
 ```
-# Slack設定
 SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
 SLACK_SIGNING_SECRET=your-slack-signing-secret
-
-# Dify設定
 DIFY_API_KEY=your-dify-api-key
 DIFY_API_ENDPOINT=https://api.dify.ai/v1/chat-messages
-
-# サーバー設定
 PORT=3000
 ```
 
+> **重要:** Azure Web Appにデプロイする場合は、Azure Portalの「構成」セクションで上記環境変数を必ず設定してください。
+> SlackトークンはSlackアプリ管理画面で最新のものを取得し、Azure側も必ず一致させてください。
+
 ### 5. ローカルでのテスト実行
 ```bash
-# 開発モードで実行
-npm run dev
-
-# または本番モードで実行
-npm start
+npm run dev   # 開発モード
+npm start     # 本番モード
 ```
 
 ### 6. Azure Web Appへのデプロイ
 1. Azure PortalでリソースグループとApp Serviceを作成
-2. GitHubリポジトリと連携するよう継続的デプロイを設定
-3. 環境変数をAzure App Serviceの「構成」セクションに追加
-4. デプロイが完了したら、URLをSlackアプリの「Event Subscriptions」のRequest URLに設定：
-   ```
-   https://your-app-name.azurewebsites.net/slack/events
-   ```
+2. GitHubリポジトリと連携し継続的デプロイを設定
+3. Azure App Serviceの「構成」で環境変数を追加
+4. デプロイ後、  
+   `https://your-app-name.azurewebsites.net/slack/events`  
+   をSlackアプリの「Event Subscriptions」のRequest URLに設定
 
-## 使用方法
+---
+
+## テスト・デバッグ運用（2024/06時点の一時的な仕様）
+
+### テスト用コードについて
+現在、Slackボットの基本動作確認のため、Dify連携を一時的にバイパスし、受信メッセージをそのまま返すテスト用コードになっています。
+
+#### `src/slack.js` の該当部分
+```js
+// メッセージハンドラ
+app.message(async ({ message, say }) => {
+  try {
+    if (message.subtype === 'bot_message') return;
+    console.log('メッセージ受信:', JSON.stringify(message, null, 2));
+    const threadTs = message.thread_ts || message.ts;
+    await say({
+      text: `こんにちは！メッセージを受け取りました: "${message.text}"`,
+      thread_ts: threadTs
+    });
+  } catch (error) {
+    console.error('メッセージ処理エラー:', error);
+    console.error('エラー詳細:', JSON.stringify(error, null, 2));
+    await say({
+      text: "エラーが発生しました。しばらくしてからもう一度お試しください。",
+      thread_ts: message.thread_ts || message.ts
+    });
+  }
+});
+```
+
+- 受信したメッセージ内容がAzureのログストリームやコンソールに詳細に出力されます。
+- Dify連携を再開する場合は、元のコードに戻してください。
+
+### メンションイベントのデバッグ
+`app_mention`イベントでも、イベント内容が`console.log`で出力されます。
+
+---
+
+## 使い方
 
 ### チャンネルでの質問
-1. 大津神ボットをチャンネルに追加（`/invite @大津神`）
-2. メンションして質問：
-   ```
-   @大津神 プロジェクトXのスケジュールはどうなっていますか？
-   ```
+1. `/invite @大津神` でボットをチャンネルに追加
+2. メンションして質問  
+   例:  
+   `@大津神 プロジェクトXのスケジュールは？`
 
 ### DMでの質問
-1. 大津神ボットに直接メッセージを送信
-2. 質問を入力するだけ：
-   ```
-   社内規定の有給休暇の申請方法を教えてください
-   ```
+1. ボットに直接メッセージを送信
+2. 例:  
+   `社内規定の有給休暇の申請方法を教えて`
 
-### 回答形式
-ボットからの回答には、情報源となったドキュメントへの参照が含まれます：
+### テスト用応答例
 ```
-プロジェクトXのスケジュールは以下の通りです：
-- フェーズ1: 5月15日〜6月30日
-- フェーズ2: 7月1日〜8月15日
-- リリース: 8月31日
-
-*参照情報:*
->1. プロジェクトX計画書.docx
->2. 2025年度開発ロードマップ.pdf
+こんにちは！メッセージを受け取りました: "プロジェクトXのスケジュールは？"
 ```
 
-## カスタマイズ
-
-### プロンプト調整
-より良い回答品質を得るためには、Difyアプリケーションのプロンプト設定を調整します：
-1. Difyダッシュボードの「Prompt Engineering」セクションにアクセス
-2. ユースケースに合わせてプロンプトテンプレートを最適化
-
-### 文書管理
-1. 定期的に新しいドキュメントをDifyにアップロード
-2. 古い情報は更新または削除
+---
 
 ## トラブルシューティング
 
 ### ボットが応答しない場合
-1. 環境変数が正しく設定されているか確認
-2. Slack APIの「Event Subscriptions」のステータスを確認
-3. アプリログでエラーメッセージを確認
+- Azureの「構成」で環境変数が正しいか確認
+- Slack APIの「Event Subscriptions」ステータスを確認
+- Azureの「ログストリーム」や`logs/`ディレクトリのエラーログを確認
+- Slackトークンが最新かつ一致しているか再確認
 
-### API制限に達した場合
-1. Difyの利用プランをアップグレード
-2. レート制限を回避するためにキャッシュ機構を実装
+### API制限やDify連携の問題
+- Dify連携を再開する場合は、`src/slack.js`の該当箇所を元に戻してください
+- DifyのAPIキーやエンドポイントが正しいか確認
+
+---
+
+## よくある質問（FAQ）
+
+**Q. Azure以外のNode.jsサーバーでも動きますか？**  
+A. はい、Node.js 18以上が動作する環境であれば動作します。
+
+**Q. ログはどこに出力されますか？**  
+A. `logs/`ディレクトリにファイル出力されます。AzureではApplication Insights等の利用も推奨します。
+
+**Q. DifyのAPIキーやSlackトークンが漏洩した場合は？**  
+A. 速やかに該当キーを無効化し、新しいキーを発行してください。
+
+---
 
 ## ライセンス
 このプロジェクトは社内利用限定です。無断転載・配布を禁止します。
 
-## 連絡先
-問題や質問がある場合は、内部チケットシステムまたは以下の担当者にお問い合わせください：
+---
+
+## 問い合わせ先
 - 技術担当: tech@example.com
 - 管理者: admin@example.com
