@@ -49,26 +49,20 @@ app.message(async ({ message, say }) => {
     // ボットのメッセージは無視
     if (message.subtype === 'bot_message') return;
     
+    console.log('メッセージ受信:', JSON.stringify(message, null, 2));
+    
     // スレッドの親メッセージも処理対象とする
     const threadTs = message.thread_ts || message.ts;
     
-    // 処理中メッセージ
-    await sendTypingMessage(say, threadTs);
-    
-    // Dify APIに問い合わせ (リトライ付き)
-    const { answer, references } = await queryDifyWithRetry(message.text, message.user);
-    
-    // 参照情報の整形
-    const referenceText = formatReferences(references);
-    
-    // 結果を返信
+    // Difyをバイパスして直接応答
     await say({
-      text: answer + referenceText,
+      text: `こんにちは！メッセージを受け取りました: "${message.text}"`,
       thread_ts: threadTs
     });
     
   } catch (error) {
     console.error('メッセージ処理エラー:', error);
+    console.error('エラー詳細:', JSON.stringify(error, null, 2));
     await say({
       text: "エラーが発生しました。しばらくしてからもう一度お試しください。",
       thread_ts: message.thread_ts || message.ts
@@ -79,6 +73,7 @@ app.message(async ({ message, say }) => {
 // メンション対応
 app.event('app_mention', async ({ event, say }) => {
   try {
+    console.log('メンション受信:', JSON.stringify(event, null, 2));
     // 処理中メッセージ
     await sendTypingMessage(say, event.ts);
     
