@@ -1,25 +1,34 @@
-# 大津神 - Dify × Slack RAGボット
+# 大津神 - Slack × Dify × Azure 社内ナレッジボット
 
 ## 概要
 
-「大津神」は、Difyの検索拡張生成（RAG: Retrieval-Augmented Generation）機能を活用したSlackボットです。  
-Slack上での自然言語による質問に対し、社内ドキュメントやナレッジベースから関連情報を検索・抽出し、根拠付きの回答を自動生成します。  
-チームのナレッジ共有・情報アクセスの効率化を目的としています。
+「大津神」は、Difyの検索拡張生成（RAG）機能を活用し、Slack上で社内ドキュメントやナレッジベースに対する質問に自動で回答するAIボットです。Azure Web App上でNode.jsアプリとして稼働し、情報アクセスの効率化・ナレッジ共有の促進を実現します。
 
 ---
 
 ## 主な特徴
+- **RAG（検索拡張生成）**: 社内ドキュメントから関連情報を検索し、AIが根拠付きで回答
+- **Slack連携**: チャンネル/DMでの自然言語質問に対応
+- **引用元の明示**: 回答の根拠となるドキュメント名を自動表示
+- **Azure Web App対応**: Node.jsアプリとしてそのままデプロイ可能
+- **セキュアな運用**: 環境変数によるAPIキー・トークン管理
 
-- **RAG（検索拡張生成）**  
-  社内ドキュメントから関連情報を検索し、AIが根拠付きで回答を生成します。
-- **Slack連携**  
-  チャンネルでのメンション、またはDMでの直接質問に対応。
-- **引用元の明示**  
-  回答の根拠となるドキュメント名やファイル名を自動で表示。
-- **マルチチャンネル対応**  
-  複数チャンネル・複数ユーザーで同時利用可能。
-- **Azure Web App対応**  
-  Node.jsアプリとしてAzure Web Appにそのままデプロイ可能。
+---
+
+## システム構成
+
+```
+Slackユーザー
+   │
+   ▼
+Slackアプリ（Event API）
+   │
+   ▼
+Azure Web App（Node.js: akitademo-slack-bot）
+   │
+   ▼
+Dify API（RAG/LLM/ナレッジベース）
+```
 
 ---
 
@@ -37,7 +46,7 @@ akitademo-slack-bot/
 ├── .env                 # 環境変数ファイル（Git管理外）
 ├── package.json         # 依存パッケージ・スクリプト
 ├── README.md            # このファイル
-└── ...（その他省略）
+└── ...
 ```
 
 ---
@@ -45,170 +54,106 @@ akitademo-slack-bot/
 ## セットアップ手順
 
 ### 前提条件
-
 - Node.js 18以上
 - Slackワークスペースの管理者権限
 - Difyアカウント
-- Azure Web Appアカウント
+- Microsoft Azureアカウント
+- GitHubアカウント
 
-### 1. Slackアプリの作成
+### 1. Difyの準備
+- [Dify](https://dify.ai/)でアカウント作成
+- ナレッジベース（社内ドキュメント等）をアップロードし、APIキーを取得
+- APIエンドポイントは `https://api.dify.ai/v1/chat-messages` を推奨
 
-1. [Slack API](https://api.slack.com/apps)で新規アプリ作成（From scratch）
-2. アプリ名「大津神」を入力し、ワークスペースを選択
-3. 「OAuth & Permissions」で以下のBotスコープを追加  
-   `app_mentions:read`, `chat:write`, `channels:history`, `channels:read`, `groups:history`, `im:history`
-4. 「Event Subscriptions」を有効化し、  
-   `app_mention`, `message.channels`, `message.im` をサブスクライブ
-5. 「App Home」タブで「Messages Tab」を有効化
-6. ワークスペースにアプリをインストール
-7. Bot Token (`xoxb-...`) と Signing Secret を控える
+### 2. Slackアプリの作成
+- [Slack API](https://api.slack.com/apps)で新規アプリ作成
+- Bot Token Scopes: `app_mentions:read`, `chat:write`, `channels:history`, `channels:read`, `groups:history`, `im:history`
+- Event Subscriptions: `app_mention`, `message.channels`, `message.im`
+- App Home: 「Messages Tab」有効化
+- Bot Token（`xoxb-...`）とSigning Secretを控える
 
-### 2. Difyのセットアップ
+### 3. Azure Web Appの準備
+- Azure Portalでリソースグループ・App Serviceプラン・Web Appを作成
+- ランタイム: Node.js 18 LTS
+- GitHubリポジトリと連携し、CI/CDを構成
 
-1. [Dify](https://dify.ai/)でアカウント作成
-2. 新規アプリケーション作成（RAG機能有効化）
-3. LLMプロバイダー（OpenAI, Claude等）を選択
-4. 社内ドキュメントをアップロードしインデックス化
-5. APIセクションからAPIキーを取得
+### 4. Azure環境変数の設定
+Azure Web Appの「構成」→「アプリケーション設定」で以下を追加：
 
-### 3. リポジトリのクローンとセットアップ
+| 名前                  | 値（例）                                      |
+|-----------------------|-----------------------------------------------|
+| SLACK_BOT_TOKEN       | xoxb-xxxxxxxxxxxxxxxxxxxxxxxxxxxx             |
+| SLACK_SIGNING_SECRET  | xxxxxxxx                                     |
+| DIFY_API_KEY          | sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxx               |
+| DIFY_API_ENDPOINT     | https://api.dify.ai/v1/chat-messages          |
+| PORT                  | 8080                                          |
+| NODE_ENV              | production                                    |
 
-```bash
-git clone https://github.com/yourusername/akitademo-slack-bot.git
-cd akitademo-slack-bot
-npm install
-```
+> ※ `.env`ファイルはローカル開発用。Azure本番では「構成」から設定してください。
 
-### 4. 環境変数の設定
-
-`.env`ファイルを作成し、以下を記入
-
-```
-SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
-SLACK_SIGNING_SECRET=your-slack-signing-secret
-DIFY_API_KEY=your-dify-api-key
-DIFY_API_ENDPOINT=https://api.dify.ai/v1/chat-messages
-PORT=3000
-```
-
-> **重要:** Azure Web Appにデプロイする場合は、Azure Portalの「構成」セクションで上記環境変数を必ず設定してください。  
-> SlackトークンはSlackアプリ管理画面で最新のものを取得し、Azure側も必ず一致させてください。
-
-### 5. ローカルでのテスト実行
-
-```bash
-npm run dev   # 開発モード
-npm start     # 本番モード
-```
-
-### 6. Azure Web Appへのデプロイ
-
-1. Azure PortalでリソースグループとApp Serviceを作成
-2. GitHubリポジトリと連携し継続的デプロイを設定
-3. Azure App Serviceの「構成」で環境変数を追加
-4. デプロイ後、  
-   `https://your-app-name.azurewebsites.net/slack/events`  
-   をSlackアプリの「Event Subscriptions」のRequest URLに設定
-
----
-
-## コード構造と動作概要
-
-- `src/index.js`  
-  アプリのエントリーポイント。`startApp()`でSlackボットを起動し、未処理例外をロギング。
-- `src/slack.js`  
-  Slackイベントの受信・応答ロジック。  
-  - `app.message`で通常メッセージを処理  
-  - `app.event('app_mention')`でメンションイベントを処理  
-  - Dify API連携は`dify.js`経由で行うが、**現在はテスト用にDifyバイパス実装**（下記参照）
-- `src/dify.js`  
-  Dify APIとの通信・リトライ処理
-- `src/config.js`  
-  環境変数の読み込みとアプリ設定
-- `src/logger.js`  
-  winstonによるファイル・コンソール両対応のロギング
-
----
-
-## テスト・デバッグ運用（2024/06時点の一時的な仕様）
-
-### テスト用コードについて
-
-現在、Slackボットの基本動作確認のため、Dify連携を一時的にバイパスし、受信メッセージをそのまま返すテスト用コードになっています。
-
-#### `src/slack.js` の該当部分
-
-```js
-// メッセージハンドラ
-app.message(async ({ message, say }) => {
-  try {
-    if (message.subtype === 'bot_message') return;
-    console.log('メッセージ受信:', JSON.stringify(message, null, 2));
-    const threadTs = message.thread_ts || message.ts;
-    await say({
-      text: `こんにちは！メッセージを受け取りました: "${message.text}"`,
-      thread_ts: threadTs
-    });
-  } catch (error) {
-    console.error('メッセージ処理エラー:', error);
-    console.error('エラー詳細:', JSON.stringify(error, null, 2));
-    await say({
-      text: "エラーが発生しました。しばらくしてからもう一度お試しください。",
-      thread_ts: message.thread_ts || message.ts
-    });
-  }
-});
-```
-
-- 受信したメッセージ内容がAzureのログストリームやコンソールに詳細に出力されます。
-- Dify連携を再開する場合は、`queryDifyWithRetry`等の元のコードに戻してください。
-
-#### メンションイベントのデバッグ
-
-`app_mention`イベントでも、イベント内容が`console.log`で出力されます。
+### 5. デプロイとSlack連携
+- GitHub Actions等で自動デプロイ
+- デプロイ後、Web AppのURL（例: `https://your-app-name.azurewebsites.net/slack/events`）をSlackのEvent SubscriptionsのRequest URLに設定
+- Slackアプリをワークスペースにインストール
 
 ---
 
 ## 使い方
 
 ### チャンネルでの質問
-
 1. `/invite @大津神` でボットをチャンネルに追加
 2. メンションして質問  
    例:  
-   `@大津神 プロジェクトXのスケジュールは？`
+   `@大津神 社内規定について教えて`
 
 ### DMでの質問
-
 1. ボットに直接メッセージを送信
 2. 例:  
-   `社内規定の有給休暇の申請方法を教えて`
+   `有給休暇の申請方法は？`
 
-### テスト用応答例
+### 応答例
+```
+有給休暇の申請方法は以下の通りです：
+- 申請フォームに必要事項を記入
+- 上長の承認を得る
 
+*参照情報:*
+>1. 社内就業規則.pdf
 ```
-こんにちは！メッセージを受け取りました: "プロジェクトXのスケジュールは？"
-```
+
+---
+
+## 本番用コードのポイント
+- Slackからのメッセージ受信時、Dify API（環境変数で指定）に問い合わせてAI応答を生成
+- 参照情報も自動で付与
+- Azureの環境変数は`config.js`経由で全て取得
+- ログは`logs/`ディレクトリおよびコンソールに出力
 
 ---
 
 ## トラブルシューティング
 
 ### ボットが応答しない場合
-
 - Azureの「構成」で環境変数が正しいか確認
 - Slack APIの「Event Subscriptions」ステータスを確認
 - Azureの「ログストリーム」や`logs/`ディレクトリのエラーログを確認
-- Slackトークンが最新かつ一致しているか再確認
+- Dify APIキーやナレッジベース設定を再確認
 
-### API制限やDify連携の問題
-
-- Dify連携を再開する場合は、`src/slack.js`の該当箇所を元に戻してください
-- DifyのAPIキーやエンドポイントが正しいか確認
+### よくあるエラー
+- **invalid_auth**: Slackトークンが古い/間違い → 最新トークンを再設定
+- **Dify APIエラー**: APIキーやエンドポイント、ナレッジベースを再確認
+- **イベントサブスクリプション検証失敗**: Azure Web AppのURLや起動状態を確認
 
 ---
 
-## よくある質問（FAQ）
+## セキュリティ・運用Tips
+- APIキーやトークンは**絶対にGitHub等に公開しない**
+- Azureの「構成」でのみ管理し、漏洩時は速やかにローテーション
+- 必要に応じて、特定チャンネル/ユーザーのみ応答する制御も実装可能
+
+---
+
+## FAQ
 
 **Q. Azure以外のNode.jsサーバーでも動きますか？**  
 A. はい、Node.js 18以上が動作する環境であれば動作します。
@@ -222,12 +167,10 @@ A. 速やかに該当キーを無効化し、新しいキーを発行してく�
 ---
 
 ## ライセンス
-
 このプロジェクトは社内利用限定です。無断転載・配布を禁止します。
 
 ---
 
 ## 問い合わせ先
-
 - 技術担当: tech@example.com
 - 管理者: admin@example.com
